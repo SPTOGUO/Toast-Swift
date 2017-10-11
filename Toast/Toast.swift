@@ -27,6 +27,19 @@ import UIKit
 import ObjectiveC
 
 /**
+ Keys used for associated objects.
+ */
+private struct ToastKeys {
+    static var timer        = "com.toast-swift.timer"
+    static var duration     = "com.toast-swift.duration"
+    static var point        = "com.toast-swift.point"
+    static var completion   = "com.toast-swift.completion"
+    static var activeToast  = "com.toast-swift.activeToast"
+    static var activityView = "com.toast-swift.activityView"
+    static var queue        = "com.toast-swift.queue"
+    static var tag          = "com.toast-swift.tag"
+}
+/**
  Toast is a Swift extension that adds toast notifications to the `UIView` object class.
  It is intended to be simple, lightweight, and easy to use. Most toast notifications 
  can be triggered with a single line of code.
@@ -37,20 +50,6 @@ import ObjectiveC
  
  */
 public extension UIView {
-    
-    /**
-     Keys used for associated objects.
-     */
-    private struct ToastKeys {
-        static var timer        = "com.toast-swift.timer"
-        static var duration     = "com.toast-swift.duration"
-        static var point        = "com.toast-swift.point"
-        static var completion   = "com.toast-swift.completion"
-        static var activeToast  = "com.toast-swift.activeToast"
-        static var activityView = "com.toast-swift.activityView"
-        static var queue        = "com.toast-swift.queue"
-    }
-    
     /**
      Swift closures can't be directly associated with objects via the
      Objective-C runtime, so the (ugly) solution is to wrap them in a
@@ -97,6 +96,7 @@ public extension UIView {
     public func makeToast(_ message: String?, duration: TimeInterval = ToastManager.shared.duration, position: ToastPosition = ToastManager.shared.position, title: String? = nil, image: UIImage? = nil, style: ToastStyle = ToastManager.shared.style, completion: ((_ didTap: Bool) -> Void)? = nil) {
         do {
             let toast = try toastViewForMessage(message, title: title, image: image, style: style)
+            makeToastTag(toast: toast, message: message, title: title, imageDescription: image?.description)
             showToast(toast, duration: duration, position: position, completion: completion)
         } catch ToastError.insufficientData {
             print("Error: message, title, and image are all nil")
@@ -118,6 +118,7 @@ public extension UIView {
     public func makeToast(_ message: String?, duration: TimeInterval = ToastManager.shared.duration, point: CGPoint, title: String?, image: UIImage?, style: ToastStyle = ToastManager.shared.style, completion: ((_ didTap: Bool) -> Void)?) {
         do {
             let toast = try toastViewForMessage(message, title: title, image: image, style: style)
+            makeToastTag(toast: toast, message: message, title: title, imageDescription: image?.description)
             showToast(toast, duration: duration, point: point, completion: completion)
         } catch ToastError.insufficientData {
             print("Error: message, title, and image cannot all be nil")
@@ -137,7 +138,7 @@ public extension UIView {
      @param completion The completion block, executed after the toast view disappears.
      didTap will be `true` if the toast view was dismissed from a tap.
      */
-    public func showToast(_ toast: UIView, duration: TimeInterval = ToastManager.shared.duration, position: ToastPosition = ToastManager.shared.position, completion: ((_ didTap: Bool) -> Void)? = nil) {
+    public func showToast(_ toast: UIView, duration: TimeInterval = ToastManager.shared.duration, position: ToastPosition = ToastManager.shared.position ,completion: ((_ didTap: Bool) -> Void)? = nil) {
         let point = position.centerPoint(forToast: toast, inSuperview: self)
         showToast(toast, duration: duration, point: point, completion: completion)
     }
@@ -156,9 +157,15 @@ public extension UIView {
     public func showToast(_ toast: UIView, duration: TimeInterval = ToastManager.shared.duration, point: CGPoint, completion: ((_ didTap: Bool) -> Void)? = nil) {
         objc_setAssociatedObject(toast, &ToastKeys.completion, ToastCompletionWrapper(completion), .OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         
-        if let _ = objc_getAssociatedObject(self, &ToastKeys.activeToast) as? UIView, ToastManager.shared.isQueueEnabled {
+        if let activeToast = objc_getAssociatedObject(self, &ToastKeys.activeToast) as? UIView, ToastManager.shared.isQueueEnabled {
             objc_setAssociatedObject(toast, &ToastKeys.duration, NSNumber(value: duration), .OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             objc_setAssociatedObject(toast, &ToastKeys.point, NSValue(cgPoint: point), .OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            
+            if let tag = objc_getAssociatedObject(toast, &ToastKeys.tag) as? String, let activeTag = objc_getAssociatedObject(activeToast, &ToastKeys.tag) as? String {
+                if activeTag == tag || queue.isToastEqual(tag: tag) {
+                    return
+                }
+            }
             
             queue.add(toast)
         } else {
@@ -325,6 +332,11 @@ public extension UIView {
                 self.showToast(nextToast, duration: duration.doubleValue, point: point.cgPointValue)
             }
         }
+    }
+    
+    private func makeToastTag(toast: UIView ,message: String?, title: String?, imageDescription: String?) {
+        let tag = (message ?? "") + (title ?? "") + (imageDescription ?? "")
+        objc_setAssociatedObject(toast, &ToastKeys.tag, tag, .OBJC_ASSOCIATION_COPY_NONATOMIC)
     }
     
     // MARK: - Events
@@ -696,5 +708,18 @@ public enum ToastPosition {
         case .bottom:
             return CGPoint(x: superview.bounds.size.width / 2.0, y: (superview.bounds.size.height - (toast.frame.size.height / 2.0)) - padding)
         }
+    }
+}
+
+fileprivate extension NSMutableArray {
+    fileprivate func isToastEqual(tag: String) -> Bool {
+        for element in self {
+            if let toast = element as? UIView, let toastTag = objc_getAssociatedObject(toast, &ToastKeys.tag) as? String {
+                if toastTag == tag {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }

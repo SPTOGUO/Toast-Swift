@@ -28,6 +28,7 @@ import UIKit
 class ViewController: UITableViewController {
 
     fileprivate var showingActivity = false
+    fileprivate var image = #imageLiteral(resourceName: "toast")
     
     fileprivate struct ReuseIdentifiers {
         static let switchCellId = "toastSwitchCell"
@@ -170,7 +171,7 @@ extension ViewController {
             self.navigationController?.view.makeToast("This is a piece of toast with a title", duration: 2.0, position: .top, title: "Toast Title", image: nil)
         case 3:
             // Make toast with an image
-            self.navigationController?.view.makeToast("This is a piece of toast with an image", duration: 2.0, position: .center, title: nil, image: UIImage(named: "toast.png"))
+            self.navigationController?.view.makeToast("This is a piece of toast with an image", duration: 2.0, position: .center, title: nil, image: image)
         case 4:
             // Make toast with an image, title, and completion closure
             self.navigationController?.view.makeToast("This is a piece of toast with a title, image, and completion closure", duration: 2.0, position: .bottom, title: "Toast Title", image: UIImage(named: "toast.png")) { didTap in
