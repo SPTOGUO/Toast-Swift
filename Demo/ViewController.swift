@@ -28,6 +28,7 @@ import UIKit
 class ViewController: UITableViewController {
 
     fileprivate var showingActivity = false
+    fileprivate var showingMessageActivity = false
     fileprivate var image = #imageLiteral(resourceName: "toast")
     
     fileprivate struct ReuseIdentifiers {
@@ -76,7 +77,7 @@ extension ViewController {
         if section == 0 {
             return 2
         } else {
-            return 9
+            return 10
         }
     }
     
@@ -146,11 +147,11 @@ extension ViewController {
             case 6: cell.textLabel?.text = "Show a custom view as toast"
             case 7: cell.textLabel?.text = "Show an image as toast at point\n(110, 110)"
             case 8: cell.textLabel?.text = showingActivity ? "Hide toast activity" : "Show toast activity"
+            case 9: cell.textLabel?.text = showingMessageActivity ? "Hide message toast activity" : "Show message toast activity"
             default: cell.textLabel?.text = nil
             }
-            
-            return cell
-            
+        return cell
+        
         }
     }
     
@@ -202,12 +203,27 @@ extension ViewController {
         case 8:
             // Make toast activity
             if !showingActivity {
-                self.navigationController?.view.makeToastActivity(.center)
+                self.navigationController?.view.makeToastActivity(.center, message: "我是大好人")
             } else {
                 self.navigationController?.view.hideToastActivity()
             }
             
             showingActivity = !showingActivity
+            
+            tableView.reloadData()
+        case 9:
+            // Make toast activity
+            var style = ToastStyle()
+            style.activityFont = UIFont.systemFont(ofSize: 16)
+            let manager = ToastManager.shared
+            manager.style = style
+            if !showingMessageActivity {
+                self.navigationController?.view.makeToastActivity(.center, message: "我是大好人，我是啦啦啦，是撒测试奋斗噶德国 v 吧疯狂看着你可能呢我是大好人，我是啦啦啦，是撒测试奋斗噶德国 v 吧疯狂看着你可能呢我是大好人，我是啦啦啦，是撒测试奋斗噶德国 v 吧疯狂看着你可能呢")
+            } else {
+                self.navigationController?.view.hideToastActivity()
+            }
+            
+            showingMessageActivity = !showingMessageActivity
             
             tableView.reloadData()
         default:

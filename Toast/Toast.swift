@@ -203,11 +203,11 @@ public extension UIView {
     
      @param position The toast's position
      */
-    public func makeToastActivity(_ position: ToastPosition) {
+    public func makeToastActivity(_ position: ToastPosition, message: String = "") {
         // sanity
         if let _ = objc_getAssociatedObject(self, &ToastKeys.activityView) as? UIView  { return }
         
-        let toast = createToastActivityView()
+        let toast = createToastActivityView(message: message)
         let point = position.centerPoint(forToast: toast, inSuperview: self)
         makeToastActivity(toast, point: point)
     }
@@ -224,11 +224,11 @@ public extension UIView {
      
      @param point The toast's center point
      */
-    public func makeToastActivity(_ point: CGPoint) {
+    public func makeToastActivity(_ point: CGPoint, message: String = "") {
         // sanity
         if let _ = objc_getAssociatedObject(self, &ToastKeys.activityView) as? UIView { return }
         
-        let toast = createToastActivityView()
+        let toast = createToastActivityView(message: message)
         makeToastActivity(toast, point: point)
     }
     
@@ -261,27 +261,55 @@ public extension UIView {
         })
     }
     
-    private func createToastActivityView() -> UIView {
+    private func createToastActivityView(message: String) -> UIView {
         let style = ToastManager.shared.style
-        
+
         let activityView = UIView(frame: CGRect(x: 0.0, y: 0.0, width: style.activitySize.width, height: style.activitySize.height))
         activityView.backgroundColor = style.backgroundColor
         activityView.autoresizingMask = [.flexibleLeftMargin, .flexibleRightMargin, .flexibleTopMargin, .flexibleBottomMargin]
         activityView.layer.cornerRadius = style.cornerRadius
-        
+
         if style.displayShadow {
             activityView.layer.shadowColor = style.shadowColor.cgColor
             activityView.layer.shadowOpacity = style.shadowOpacity
             activityView.layer.shadowRadius = style.shadowRadius
             activityView.layer.shadowOffset = style.shadowOffset
         }
-        
+
         let activityIndicatorView = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
-        activityIndicatorView.center = CGPoint(x: activityView.bounds.size.width / 2.0, y: activityView.bounds.size.height / 2.0)
         activityView.addSubview(activityIndicatorView)
+        if message != "" {
+            let messageLabel = UILabel()
+            messageLabel.font = style.activityFont
+            messageLabel.textColor = .white
+            messageLabel.text = message
+            messageLabel.textAlignment = .center
+            messageLabel.numberOfLines = 0
+            let size = calculateSize(text: message)
+            messageLabel.frame.size = size
+            activityView.frame.size = CGSize(width: (size.width + 30) > style.activitySize.width ? (size.width + 30) : style.activitySize.width , height: style.activitySize.height + size.height)
+            activityIndicatorView.center = CGPoint(x: activityView.bounds.size.width / 2.0, y:  style.activitySize.height / 2.0)
+            messageLabel.center = CGPoint(x: activityView.bounds.size.width / 2.0, y: activityIndicatorView.center.y + messageLabel.frame.height / 2 + style.activitySize.height / 2.0 - 15)
+            activityView.addSubview(messageLabel)
+        } else {
+            activityIndicatorView.center = CGPoint(x: activityView.bounds.size.width / 2.0, y: activityView.bounds.size.height / 2.0)
+        }
+
         activityIndicatorView.startAnimating()
-        
+
         return activityView
+    }
+    
+    // calculate messageLabel size
+    private func calculateSize(text: String) -> CGSize {
+        let style = ToastManager.shared.style
+        
+        let maxWidth = UIScreen.main.bounds.width - 160
+        let att = [NSAttributedStringKey.font : style.activityFont] as [NSAttributedStringKey: Any]
+        let contentSize = NSAttributedString(string: text, attributes: att).boundingRect(with: CGSize(width: maxWidth, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).size
+        
+        
+        return contentSize
     }
     
     // MARK: - Private Show/Hide Methods
@@ -627,6 +655,11 @@ public struct ToastStyle {
      Default is 100 x 100.
     */
     public var activitySize = CGSize(width: 100.0, height: 100.0)
+    
+    /**
+     The font of the toast activity message. Default is 14
+     */
+    public var activityFont: UIFont = UIFont.systemFont(ofSize: 14)
     
     /**
      The fade in/out animation duration. Default is 0.2.
