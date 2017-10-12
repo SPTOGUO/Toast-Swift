@@ -161,6 +161,7 @@ public extension UIView {
             objc_setAssociatedObject(toast, &ToastKeys.duration, NSNumber(value: duration), .OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             objc_setAssociatedObject(toast, &ToastKeys.point, NSValue(cgPoint: point), .OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             
+            // if tag same, queue not add the toast
             if let tag = objc_getAssociatedObject(toast, &ToastKeys.tag) as? String, let activeTag = objc_getAssociatedObject(activeToast, &ToastKeys.tag) as? String {
                 if activeTag == tag || queue.isToastEqual(tag: tag) {
                     return
@@ -202,6 +203,7 @@ public extension UIView {
      `makeToastActivity(position:)` has no effect on the queueing behavior of the `showToast` methods.
     
      @param position The toast's position
+            message The toast's alert text
      */
     public func makeToastActivity(_ position: ToastPosition, message: String = "") {
         // sanity
@@ -223,6 +225,7 @@ public extension UIView {
      `makeToastActivity(position:)` has no effect on the queueing behavior of the `showToast` methods.
      
      @param point The toast's center point
+            message The toast's alert text
      */
     public func makeToastActivity(_ point: CGPoint, message: String = "") {
         // sanity
@@ -285,8 +288,10 @@ public extension UIView {
             messageLabel.text = message
             messageLabel.textAlignment = .center
             messageLabel.numberOfLines = 0
+            // calculate messageLabel size according to the text
             let size = calculateSize(text: message)
             messageLabel.frame.size = size
+            // update activityView size is based on the messageLabel
             activityView.frame.size = CGSize(width: (size.width + 30) > style.activitySize.width ? (size.width + 30) : style.activitySize.width , height: style.activitySize.height + size.height)
             activityIndicatorView.center = CGPoint(x: activityView.bounds.size.width / 2.0, y:  style.activitySize.height / 2.0)
             messageLabel.center = CGPoint(x: activityView.bounds.size.width / 2.0, y: activityIndicatorView.center.y + messageLabel.frame.height / 2 + style.activitySize.height / 2.0 - 15)
